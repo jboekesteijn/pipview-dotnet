@@ -1,11 +1,13 @@
 using System.Net;
 using System;
 using PipView.Exceptions;
+using PipView.Extensions;
 using System.IO;
 using System.Security.Cryptography;
 using System.Diagnostics;
-using System.Windows.Forms;
+using System.Xml;
 using System.Xml.XPath;
+using System.Xml.Linq;
 
 namespace PipView.Updater
 {
@@ -18,43 +20,20 @@ namespace PipView.Updater
 			wr.Method = "GET";
 			wr.KeepAlive = false;
 			wr.AllowAutoRedirect = false;
-			wr.UserAgent = String.Format("PipView/{0}", Program.VersionInfo);
+            wr.UserAgent = String.Format("PipView/{0}", PipView.VersionInfo);
 
 			using (HttpWebResponse res = (HttpWebResponse)wr.GetResponse())
 			{
 				if (res.StatusCode == HttpStatusCode.OK)
 				{
-					XPathDocument xpd = new XPathDocument(res.GetResponseStream());
-					XPathNavigator nav = xpd.CreateNavigator();
-					XPathNodeIterator xpit;
+                    XPathDocument xpd = new XPathDocument(res.GetResponseStream());
+                    XPathNavigator doc = xpd.CreateNavigator().SelectSingleNode("/PipViewUpdate");
 
-					UpdateInfo ui = new UpdateInfo();
-
-					xpit = nav.Select("/PipViewUpdate");
-					if (xpit.MoveNext())
-					{
-						XPathNavigator doc = xpit.Current;
-
-						xpit = doc.Select("Uri/text()");
-						if (xpit.MoveNext())
-						{
-							ui.Uri = new Uri(xpit.Current.Value);
-						}
-
-						xpit = doc.Select("Version/text()");
-						if (xpit.MoveNext())
-						{
-							ui.Version = xpit.Current.Value;
-						}
-
-						xpit = doc.Select("Hash/text()");
-						if (xpit.MoveNext())
-						{
-							ui.Hash = xpit.Current.Value;
-						}
-					}
-
-					return ui;
+                    return new UpdateInfo { 
+                        Uri = new Uri(doc.SelectSingleNode("Uri/text()").Value),
+                        Version = doc.SelectSingleNode("Version/text()").Value,
+                        Hash = doc.SelectSingleNode("Hash/text()").Value
+                    };
 				}
 				else
 				{
@@ -63,14 +42,14 @@ namespace PipView.Updater
 			}
 		}
 
-		internal static void DownloadUpdate(UpdateInfo ui)
+		internal static string DownloadUpdate(UpdateInfo ui)
 		{
 			HttpWebRequest wr = (HttpWebRequest)WebRequest.Create(ui.Uri);
 
 			wr.Method = "GET";
 			wr.KeepAlive = false;
 			wr.AllowAutoRedirect = false;
-			wr.UserAgent = String.Format("PipView/{0}", Program.VersionInfo);
+            wr.UserAgent = String.Format("PipView/{0}", PipView.VersionInfo);
 
 			using (HttpWebResponse res = (HttpWebResponse)wr.GetResponse())
 			{
@@ -97,19 +76,23 @@ namespace PipView.Updater
 
 						byte[] givenHash = Convert.FromBase64String(ui.Hash);
 						byte[] hash = sha1.ComputeHash(memoryStream);
-
-						if (Program.ArrayMatch(hash, givenHash))
+                        
+                        if (hash.EqualsArray(givenHash))
 						{
 							try
 							{
-								using (FileStream fs = new FileStream("pipview.update", FileMode.Create))
+                                string tempName = Path.GetTempFileName();
+
+                                using (FileStream fs = new FileStream(tempName, FileMode.Create))
 								{
 									memoryStream.WriteTo(fs);
 								}
+
+                                return tempName;
 							}
 							catch (Exception)
 							{
-								throw new PipException("Het opslaan van de PipView-update is mislukt. U heeft geen rechten om bestanden op te slaan in de PipView-map.");
+								throw new PipException("Het opslaan van de PipView-update is mislukt.");
 							}
 						}
 						else
@@ -125,21 +108,28 @@ namespace PipView.Updater
 			}
 		}
 
-		internal static void PerformUpdate()
+		internal static void PerformUpdate(string updateFileName)
 		{
-			// check to see if an update is available
-			if (File.Exists("pipview.update"))
-			{
-				// start the update-file as a process with our own pid as first (and only) argument
-				ProcessStartInfo pi = new ProcessStartInfo();
-				pi.FileName = "pipview.update";
-				pi.UseShellExecute = false;
-				pi.Arguments = String.Format("{0}", Process.GetCurrentProcess().Id);
+            Process updater = new Process { 
+                StartInfo = { 
+                    FileName = "receive.exe", 
+                    UseShellExecute = false, 
+                    RedirectStandardInput = true 
+                } 
+            };       
+    
+            updater.Start();
 
-				Process.Start(pi);
+            XmlWriter xmlw = XmlWriter.Create(updater.StandardInput.BaseStream);
 
-				Application.Exit();
-			}
+            new XDocument(
+                new XElement("PipViewUpdateInfo", new XAttribute("version", "1"),
+                    new XElement("UpdateFileName", updateFileName),
+                    new XElement("ProcessHandle", Process.GetCurrentProcess().Id)
+                )
+            ).Save(xmlw);
+
+            xmlw.Close();
 		}
 	}
 }

@@ -1,19 +1,20 @@
-using System.Windows.Forms;
-using System.Threading;
-using PipView.Pip;
-using System.Timers;
 using System;
-using PipView.Exceptions;
-using System.Net;
-using PipView.Updater;
 using System.Diagnostics;
+using System.Net;
 using System.Text;
+using System.Threading;
+using System.Timers;
+using System.Windows.Forms;
 using PipView.Configuration;
+using PipView.Exceptions;
+using PipView.Pip;
+using PipView.Updater;
 
 namespace PipView
 {
 	public class PipViewContext : ApplicationContext
 	{
+        private Settings settings;
 		private NotifyIcon notifyIcon;
 		private MainForm mainForm;
 		private OptionsForm optionsForm;
@@ -23,30 +24,20 @@ namespace PipView
 		private Thread CheckUpdatesThread;
 		private Thread SendTalkbackThread;
 		private int activeThreadCount;
-		delegate void InvokeDelegate();
 
 		public PipViewContext()
 		{
-			pd = new TrafficData();
+            // load application settings
+            settings = SettingsManager.Load();
 
-			mainForm = new MainForm();
-			//mainForm.FormClosed += new FormClosedEventHandler(mainForm_FormClosed);
-			mainForm.RefreshData += new EventHandler(mnuRefreshData_Click);
-			mainForm.ShowBalloon += new EventHandler(mnuShowBalloon_Click);
-			mainForm.Options += new EventHandler(mnuOptions_Click);
-			mainForm.PipInBrowser += new EventHandler(mnuPipInBrowser_Click);
-			mainForm.CheckUpdates += new EventHandler(mnuCheckUpdates_Click);
-			mainForm.Help += new EventHandler(mainForm_Help);
-			mainForm.Exit += new EventHandler(mnuExit_Click);
-			mainForm.About += new EventHandler(mainForm_About);
-			mainForm.Website += new EventHandler(mainForm_Website);
+			pd = new TrafficData();
 
 			// refresh timer
 			refreshTimer = new System.Timers.Timer();
 			refreshTimer.Elapsed += new ElapsedEventHandler(refreshTimer_Elapsed);
 			refreshTimer.AutoReset = true;
 			UpdateTimerInterval();
-			refreshTimer.Enabled = Program.Settings.AutoRefresh;
+			refreshTimer.Enabled = settings.AutoRefresh;
 
 			// tray icon
 			notifyIcon = new NotifyIcon();
@@ -61,7 +52,6 @@ namespace PipView
 			mnuPipView.Click += new EventHandler(notifyIcon_DoubleClick);
 
 			ContextMenu mnuTray = new ContextMenu();
-			//mnuTray.Popup += new EventHandler(mnuTray_Popup);
 			mnuTray.MenuItems.Add(mnuPipView);
 			mnuTray.MenuItems.Add(new MenuItem("Pip in browser openen...", new EventHandler(mnuPipInBrowser_Click)));
 			mnuTray.MenuItems.Add(new MenuItem("-"));
@@ -72,7 +62,7 @@ namespace PipView
 
 			notifyIcon.ContextMenu = mnuTray;
 
-			if (Program.Settings.RefreshOnStartup)
+            if (settings.RefreshOnStartup)
 			{
 				StartRefreshData();
 			}
@@ -85,19 +75,24 @@ namespace PipView
 
 		private void UpdateTimerInterval()
 		{
-			refreshTimer.Interval = Program.Settings.RefreshInterval * 60 * 1000;
+            int interval = settings.RefreshInterval * 60 * 1000;
+
+            if (refreshTimer.Interval != interval)
+            {
+                refreshTimer.Interval = interval;
+            }
 		}
 
-		private void Run(InvokeDelegate id)
+		private void Run(Action id)
 		{
-			if (!mainForm.IsDisposed && mainForm.InvokeRequired)
-			{
-				mainForm.Invoke(id);
-			}
-			else
-			{
-				id.Invoke();
-			}
+            if (mainForm != null && !mainForm.IsDisposed && mainForm.InvokeRequired)
+            {
+                mainForm.Invoke(id);
+            }
+            else
+            {
+                id.Invoke();
+            }            
 		}
 
 		private void UpdateThreadCount(int c)
@@ -106,9 +101,9 @@ namespace PipView
 
 			if (activeThreadCount < 0)
 			{
-				mainForm.Invoke
+				Run
 				(
-					(InvokeDelegate)delegate()
+					delegate() 
 					{
 						MessageBox.Show("Interne fout in PipView. Negatief aantal actieve threads gesignaleerd.", "PipView", MessageBoxButtons.OK, MessageBoxIcon.Error);
 					}
@@ -116,16 +111,19 @@ namespace PipView
 			}
 
 			Run(
-				(InvokeDelegate)delegate()
+				delegate()
 				{
-					if (activeThreadCount == 0)
-					{
-						mainForm.Cursor = Cursors.Default;
-					}
-					else
-					{
-						mainForm.Cursor = Cursors.WaitCursor;
-					}
+                    if (mainForm != null)
+                    {
+                        if (activeThreadCount == 0)
+                        {
+                            mainForm.Cursor = Cursors.Default;
+                        }
+                        else
+                        {
+                            mainForm.Cursor = Cursors.WaitCursor;
+                        }
+                    }
 				}
 			);
 		}
@@ -134,7 +132,7 @@ namespace PipView
 		{
 			Run
 			(
-				(InvokeDelegate)delegate()
+				delegate()
 				{
 					if (e is PipException)
 					{
@@ -168,13 +166,6 @@ namespace PipView
 					refreshTimer.Stop();
 					refreshTimer.Dispose();
 					notifyIcon.Dispose();
-
-					if (optionsForm != null)
-					{
-						optionsForm.Dispose();
-					}
-
-					mainForm.Dispose();
 				}
 			}
 			finally
@@ -195,14 +186,38 @@ namespace PipView
 
 		private void notifyIcon_DoubleClick(object sender, EventArgs e)
 		{
-			if (mainForm.WindowState == FormWindowState.Minimized)
-			{
-				mainForm.WindowState = FormWindowState.Normal;
-			}
+            if (mainForm == null)
+            {
+                mainForm = new MainForm(settings);
 
-			mainForm.Show();
-			mainForm.Activate();
+                mainForm.FormClosed += new FormClosedEventHandler(mainForm_FormClosed);
+
+                mainForm.RefreshData += new EventHandler(mnuRefreshData_Click);
+                mainForm.ShowBalloon += new EventHandler(mnuShowBalloon_Click);
+                mainForm.Options += new EventHandler(mnuOptions_Click);
+                mainForm.PipInBrowser += new EventHandler(mnuPipInBrowser_Click);
+                mainForm.CheckUpdates += new EventHandler(mnuCheckUpdates_Click);
+                mainForm.Help += new EventHandler(mainForm_Help);
+                mainForm.Exit += new EventHandler(mnuExit_Click);
+                mainForm.About += new EventHandler(mainForm_About);
+                mainForm.Website += new EventHandler(mainForm_Website);
+            }
+            else
+            {
+                if (mainForm.WindowState == FormWindowState.Minimized)
+                {
+                    mainForm.WindowState = FormWindowState.Normal;
+                }
+            }
+
+            mainForm.Show();
+            mainForm.Activate();
 		}
+
+        void mainForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            mainForm = null;
+        }
 
 		private static void mainForm_Website(object sender, EventArgs e)
 		{
@@ -211,7 +226,7 @@ namespace PipView
 
 		private static void mainForm_About(object sender, EventArgs e)
 		{
-			MessageBox.Show(String.Format("PipView {0}. © 2001-2007 Joost-Wim Boekesteijn.", Program.VersionInfo), String.Format("PipView {0}", Program.VersionInfo), MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(String.Format("PipView {0}. © 2001-2008 Joost-Wim Boekesteijn.", PipView.VersionInfo), String.Format("PipView {0}", PipView.VersionInfo), MessageBoxButtons.OK, MessageBoxIcon.Information);
 		}
 
 		private static void mainForm_Help(object sender, EventArgs e)
@@ -228,30 +243,25 @@ namespace PipView
 		{
 			if (optionsForm == null)
 			{
-				optionsForm = new OptionsForm();
+				optionsForm = new OptionsForm(settings);
 
-				optionsForm.FormClosed += new FormClosedEventHandler(optionsForm_FormClosed);
-				optionsForm.TimerPropertiesChanged += new EventHandler(optionsForm_TimerPropertiesChanged);
+				optionsForm.FormClosed += new FormClosedEventHandler(optionsForm_FormClosed);				
+			}
 
-				optionsForm.Show(mainForm);
-			}
-			else
-			{
-				optionsForm.Show();
-				optionsForm.Activate();
-			}
+            optionsForm.Show(mainForm);
+			optionsForm.Activate();
 		}
 
 		void optionsForm_FormClosed(object sender, FormClosedEventArgs e)
 		{
-			optionsForm.Dispose();
-			optionsForm = null;
-		}
+            optionsForm = null;
 
-		void optionsForm_TimerPropertiesChanged(object sender, EventArgs e)
-		{
-			refreshTimer.Enabled = Program.Settings.AutoRefresh;
-			UpdateTimerInterval();
+            if (refreshTimer.Enabled != settings.AutoRefresh)
+            {
+                refreshTimer.Enabled = settings.AutoRefresh;
+            }
+
+            UpdateTimerInterval();
 		}
 
 		private void mnuCheckUpdates_Click(object sender, EventArgs e)
@@ -280,9 +290,11 @@ namespace PipView
 			notifyIcon.ShowBalloonTip(5000, "Dataverkeer", balloonText.ToString(), ToolTipIcon.Info);
 		}
 
-		private static bool HasLicense(string userName, string version)
+		private bool HasLicense(string userName, string version)
 		{
-			foreach (PipView.Licensing.License l in Program.Settings.Licenses)
+			return true;
+		
+            /*foreach (Licensing.License l in settings.Licenses)
 			{
 				if ((l.UserName == userName) && (l.Version == version) && l.IsValid())
 				{
@@ -290,7 +302,7 @@ namespace PipView
 				}
 			}
 
-			return false;
+			return false;*/
 		}
 
 		private void StartSendTalkback(ParserException pe)
@@ -313,11 +325,11 @@ namespace PipView
 				{
 					string trafficPage = pe.Data["TrafficPage"] as string;
 
-					PipView.Talkback.Reporter.ReportParsingError(trafficPage);
+					Talkback.Reporter.ReportParsingError(trafficPage);
 
 					Run
 					(
-						(InvokeDelegate)delegate()
+						delegate()
 						{
 							MessageBox.Show("Hartelijk dank voor het opsturen van de gegevens.\nIn het help-menu van PipView kunt u controleren of er een update voor PipView beschikbaar is.", "PipView", MessageBoxButtons.OK, MessageBoxIcon.Information);
 						}
@@ -344,11 +356,13 @@ namespace PipView
 
 		private void CheckUpdates()
 		{
+            bool exitApplication = false;
+
 			try
 			{
 				UpdateInfo ui = Update.GetUpdateInfo();
 
-				string yourversion = Program.VersionInfo;
+                string yourversion = PipView.VersionInfo;
 				string lastversion = ui.Version;
 
 				if (yourversion != lastversion)
@@ -357,7 +371,7 @@ namespace PipView
 
 					Run
 					(
-						(InvokeDelegate)delegate()
+						delegate()
 						{
 							downloadUpdate = (MessageBox.Show(String.Format("Er is een update beschikbaar. De laatste officiële versie van PipView is versie {0}.\n\nU werkt op dit moment met versie {1}. Wilt u PipView bijwerken naar versie {0}?", lastversion, yourversion), "PipView", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes);
 						}
@@ -365,15 +379,16 @@ namespace PipView
 
 					if (downloadUpdate)
 					{
-						Update.DownloadUpdate(ui);
-						Update.PerformUpdate();
+						string updateFilePath = Update.DownloadUpdate(ui);
+                        Update.PerformUpdate(updateFilePath);
+                        exitApplication = true;                                               
 					}
 				}
 				else
 				{
 					Run
 					(
-						(InvokeDelegate)delegate()
+						delegate()
 						{
 							MessageBox.Show("Er is geen update beschikbaar. U werkt op dit moment met de laatste versie van PipView.", "PipView", MessageBoxButtons.OK, MessageBoxIcon.Information);
 						}
@@ -386,6 +401,11 @@ namespace PipView
 			}
 
 			UpdateThreadCount(-1);
+
+            if (exitApplication)
+            {
+                Application.Exit();
+            }
 		}
 
 		private void StartRefreshData()
@@ -400,11 +420,11 @@ namespace PipView
 
 		private void RefreshData()
 		{
-			if (Program.Settings.DefaultCredentials)
+            if (settings.HasDefaultCredentials)
 			{
 				Run
 				(
-					(InvokeDelegate)delegate()
+					delegate()
 					{
 						notifyIcon.ShowBalloonTip(5000, "Waarschuwing", "U heeft nog geen loginnaam en wachtwoord ingevoerd. Wanneer u deze gegevens invult in het Opties-scherm, kan PipView inloggen op de website van ZeelandNet.", ToolTipIcon.Warning);
 					}
@@ -412,18 +432,18 @@ namespace PipView
 			}
 			else
 			{
-				string username = Program.Settings.UserName;
-				string password = Crypto.Decrypt(Program.Settings.GetPasswordBytes());
-				string version = Program.VersionInfo;
-				bool permanentlogin = Program.Settings.PermanentSession;
+                string username = settings.UserName;
+                string password = Crypto.Decrypt(settings.Password);
+                string version = PipView.VersionInfo;
+                bool permanentlogin = settings.PermanentSession;
 
 				try
 				{
 					if (!HasLicense(username, version))
 					{
-						PipView.Licensing.License lic = PipView.Licensing.License.Download(username, version);
+						Licensing.License lic = Licensing.License.Download(username, version);
 
-						Program.Settings.Licenses.Add(lic);
+                        settings.Licenses.Add(lic);
 					}
 
 					Session session = new Session(username, password, permanentlogin);
@@ -436,11 +456,11 @@ namespace PipView
 
 					Run
 					(
-						(InvokeDelegate)delegate()
+						delegate()
 						{
 							mainForm.UpdateData(pd);
 
-							if (Program.Settings.ShowBalloonAfterUpdate)
+                            if (settings.ShowBalloonAfterUpdate)
 							{
 								ShowBalloon();
 							}

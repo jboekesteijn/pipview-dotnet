@@ -12,7 +12,7 @@ namespace PipView.Talkback
 		{
 			List<SimpleMimePart> mimeParts = new List<SimpleMimePart>();
 
-			mimeParts.Add(new SimpleMimePart("trafficpage", "trafficpage.html", "text/html", trafficpage));
+			mimeParts.Add(new SimpleMimePart { Name = "trafficpage", FileName = "trafficpage.html", ContentType = "text/html", Data = trafficpage });
 
 			string boundary = String.Format("pipviewboundary-{0}", DateTime.Now.Ticks);			
 
@@ -22,7 +22,7 @@ namespace PipView.Talkback
 			wr.Method = "POST";
 			wr.AllowAutoRedirect = false;
 			wr.KeepAlive = false;
-			wr.UserAgent = String.Format("PipView/{0}", Program.VersionInfo);
+            wr.UserAgent = String.Format("PipView/{0}", PipView.VersionInfo);
 			wr.ContentType = String.Format("multipart/form-data; boundary={0}", boundary);
 			wr.ServicePoint.Expect100Continue = false;
 

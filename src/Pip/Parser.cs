@@ -33,7 +33,7 @@ namespace PipView.Pip
 		/// <returns>Returns a valid DateTime-object constructed from the given arguments.</returns>
 		private DateTime ParseDateString(string y, string m, string d)
 		{
-			int month = Array.IndexOf(Program.MonthNames, m);
+            int month = DutchMonthNames.GetMonthNumber(m);
 
 			if (month != -1)
 			{

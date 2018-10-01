@@ -10,6 +10,7 @@ Var ShortcutStartmenu
 Var ShortcutDesktop
 Var ShortcutQuicklaunch
 Var InstallForMe
+Var InstallForAllUsers
 
 Var CheckBox_ShortcutStartup
 Var CheckBox_ShortcutStartmenu
@@ -22,8 +23,8 @@ Var RadioButton_InstallForAllUsers
 ; Options
 ; =======
 Name "PipView"
-BrandingText "Copyright (c) 2001-2007 Joost-Wim Boekesteijn"
-OutFile "pipview-2.0.2-setup.exe"
+BrandingText "Copyright (c) 2001-2008 Joost-Wim Boekesteijn"
+OutFile "pipview-2.0.3-setup.exe"
 InstallDir "$PROGRAMFILES\PipView"
 SetCompressor /SOLID lzma
 RequestExecutionLevel admin
@@ -60,7 +61,7 @@ Page custom EnterOptions LeaveOptions
 Section
 	SetOutPath $INSTDIR
 
-	File "pipview.exe"
+	File "..\bin\Dotfuscator\pipview.exe"
 
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PipView" "DisplayName" "PipView"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PipView" "HelpLink" "http://pipview.xxp.nu/uitleg"
@@ -70,28 +71,28 @@ Section
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PipView" "NoModify" 1
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PipView" "UninstallString" '"$INSTDIR\uninstall.exe"'
 
-	${If} $InstallForMe <> 1
+	${If} $InstallForAllUsers = ${BST_CHECKED}
 		WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PipView" "Users" "all"
 		SetShellVarContext all
 	${Else}
 		WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PipView" "Users" "me"
 	${EndIf}
 
-	${If} $ShortcutStartup = 1
+	${If} $ShortcutStartup = ${BST_CHECKED}
 		CreateShortCut "$SMSTARTUP\PipView.lnk" "$INSTDIR\pipview.exe"
 	${EndIf}
 
-	${If} $ShortcutStartmenu = 1
+	${If} $ShortcutStartmenu = ${BST_CHECKED}
 		CreateDirectory "$SMPROGRAMS\PipView"
 		CreateShortCut "$SMPROGRAMS\PipView\PipView.lnk" "$INSTDIR\pipview.exe"
 		CreateShortCut "$SMPROGRAMS\PipView\Verwijder PipView.lnk" "$INSTDIR\uninstall.exe"
 	${EndIf}
 
-	${If} $ShortcutDesktop = 1
+	${If} $ShortcutDesktop = ${BST_CHECKED}
 		CreateShortCut "$DESKTOP\PipView.lnk" "$INSTDIR\pipview.exe"
 	${EndIf}
 
-	${If} $ShortcutQuicklaunch = 1
+	${If} $ShortcutQuicklaunch = ${BST_CHECKED}
 		CreateShortCut "$QUICKLAUNCH\PipView.lnk" "$INSTDIR\pipview.exe"
 	${EndIf}
 
@@ -102,11 +103,12 @@ SectionEnd
 ; ===================
 
 Function .onInit
-	StrCpy $ShortcutStartup 1
-	StrCpy $ShortcutStartmenu 1
-	StrCpy $ShortcutDesktop 1
-	StrCpy $ShortcutQuicklaunch 1
-	StrCpy $InstallForMe 1
+	StrCpy $ShortcutStartup		${BST_CHECKED}
+	StrCpy $ShortcutStartmenu	${BST_CHECKED}
+	StrCpy $ShortcutDesktop		${BST_CHECKED}
+	StrCpy $ShortcutQuicklaunch	${BST_CHECKED}
+	StrCpy $InstallForMe		${BST_CHECKED}
+	StrCpy $InstallForAllUsers	${BST_UNCHECKED}
 
 	ReadRegDWORD $0 HKLM "SOFTWARE\Microsoft\NET Framework Setup\NDP\v2.0.50727" "Install"
 
@@ -141,27 +143,12 @@ Function EnterOptions
 		${NSD_CreateRadioButton} 5u 111u 295u 10u "Voor alle gebruikers van deze computer."
 		Pop $RadioButton_InstallForAllUsers
 
-	${If} $ShortcutStartup == 1
-		SendMessage $CheckBox_ShortcutStartup ${BM_SETCHECK} ${BST_CHECKED} 0
-	${EndIf}
-
-	${If} $ShortcutStartmenu == 1
-		SendMessage $CheckBox_ShortcutStartmenu ${BM_SETCHECK} ${BST_CHECKED} 0
-	${EndIf}
-
-	${If} $ShortcutDesktop == 1
-		SendMessage $CheckBox_ShortcutDesktop ${BM_SETCHECK} ${BST_CHECKED} 0
-	${EndIf}
-
-	${If} $ShortcutQuicklaunch == 1
-		SendMessage $CheckBox_ShortcutQuicklaunch ${BM_SETCHECK} ${BST_CHECKED} 0
-	${EndIf}
-
-	${If} $InstallForMe == 1
-		SendMessage $RadioButton_InstallForMe ${BM_SETCHECK} ${BST_CHECKED} 0
-	${Else}
-		SendMessage $RadioButton_InstallForAllUsers ${BM_SETCHECK} ${BST_CHECKED} 0
-	${EndIf}
+	${NSD_SetState} $CheckBox_ShortcutStartup	$ShortcutStartup
+	${NSD_SetState} $CheckBox_ShortcutStartmenu	$ShortcutStartmenu
+	${NSD_SetState} $CheckBox_ShortcutDesktop	$ShortcutDesktop
+	${NSD_SetState} $CheckBox_ShortcutQuicklaunch	$ShortcutQuicklaunch
+	${NSD_SetState} $RadioButton_InstallForMe	$InstallForMe
+	${NSD_SetState} $RadioButton_InstallForAllUsers $InstallForAllUsers
 
 	GetFunctionAddress $0 LeaveOptions
 	nsDialogs::OnBack /NOUNLOAD $0
@@ -171,11 +158,12 @@ Function EnterOptions
 FunctionEnd
 
 Function LeaveOptions
-	SendMessage $CheckBox_ShortcutStartup ${BM_GETCHECK} 0 0 $ShortcutStartup
-	SendMessage $CheckBox_ShortcutStartmenu ${BM_GETCHECK} 0 0 $ShortcutStartmenu
-	SendMessage $CheckBox_ShortcutDesktop ${BM_GETCHECK} 0 0 $ShortcutDesktop
-	SendMessage $CheckBox_ShortcutQuicklaunch ${BM_GETCHECK} 0 0 $ShortcutQuicklaunch
-	SendMessage $RadioButton_InstallForMe ${BM_GETCHECK} 0 0 $InstallForMe
+	${NSD_GetState} $CheckBox_ShortcutStartup	$ShortcutStartup
+	${NSD_GetState} $CheckBox_ShortcutStartmenu	$ShortcutStartmenu
+	${NSD_GetState} $CheckBox_ShortcutDesktop	$ShortcutDesktop
+	${NSD_GetState} $CheckBox_ShortcutQuicklaunch	$ShortcutQuicklaunch
+	${NSD_GetState} $RadioButton_InstallForMe	$InstallForMe
+	${NSD_GetState} $RadioButton_InstallForAllUsers $InstallForAllUsers
 
 	;MessageBox MB_OK|MB_ICONINFORMATION "startup: $ShortcutStartup$\nstartmenu: $ShortcutStartmenu$\ndesktop: $ShortcutDesktop$\nquickl: $ShortcutQuicklaunch$\nforme: $InstallForMe$\n"
 FunctionEnd

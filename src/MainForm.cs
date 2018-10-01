@@ -2,11 +2,14 @@ using System.Windows.Forms;
 using System;
 using System.Drawing;
 using PipView.Pip;
+using PipView.Configuration;
 
 namespace PipView
 {
 	public partial class MainForm : Form
 	{
+        private Settings settings;
+
 		public event EventHandler RefreshData;
 		public event EventHandler ShowBalloon;
 		public event EventHandler Options;
@@ -20,9 +23,11 @@ namespace PipView
 		private SolidBrush evenBrush;
 		private SolidBrush oddBrush;
 
-		public MainForm()
+		public MainForm(Settings pipViewSettings)
 		{
 			InitializeComponent();
+
+            this.settings = pipViewSettings;
 
 			// menu creation
 			MenuItem mnuMainPipView = new MenuItem("&PipView");
@@ -51,11 +56,12 @@ namespace PipView
 			oddBrush = new SolidBrush(Color.FromArgb(255, 255, 255));
 
 			// form icon & text
-			Left = Program.Settings.Window.Left;
-			Top = Program.Settings.Window.Top;
+            Left = settings.Window.Left;
+            Top = settings.Window.Top;
+
 			Icon = Resources.Icon;
 
-			Text = String.Format("PipView {0}", Program.VersionInfo);
+            Text = String.Format("PipView {0}", PipView.VersionInfo);
 		}
 
 		private void mnuPipInBrowser_Click(object sender, EventArgs e)
@@ -113,8 +119,8 @@ namespace PipView
 
 		internal void UpdateData(TrafficData pd)
 		{
-			string monthStart = Program.MonthNames[pd.PeriodStart.Month - 1];
-			string monthEnd = Program.MonthNames[pd.PeriodEnd.Month - 1];
+            string monthStart = DutchMonthNames.GetMonthName(pd.PeriodStart.Month - 1);
+            string monthEnd = DutchMonthNames.GetMonthName(pd.PeriodEnd.Month - 1);
 
 			trafficDownValueLabel.Text = String.Format("{0:#,0.0} MB", pd.TrafficPeriodDown);
 			trafficUpValueLabel.Text = String.Format("{0:#,0.0} MB", pd.TrafficPeriodUp);
@@ -137,29 +143,13 @@ namespace PipView
 			periodBar.Value = (int)Math.Floor(pd.PeriodPercentage);
 		}
 
-		private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
-		{
-			if (e.CloseReason == CloseReason.UserClosing)
-			{
-				e.Cancel = true;
-
-				SaveLocation();
-				Hide();
-			}
-		}
-
-		private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
-		{
-			SaveLocation();
-		}
-
-		private void SaveLocation()
+		/*private void SaveLocation()
 		{
 			if (WindowState != FormWindowState.Minimized)
 			{
-				Program.Settings.Window.Left = Left;
-				Program.Settings.Window.Top = Top;
+                settings.Window.Left = Left;
+                settings.Window.Top = Top;
 			}
-		}
+		}*/
 	}
 }

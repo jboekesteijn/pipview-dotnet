@@ -2,7 +2,6 @@ using System.Net;
 using System;
 using System.Web;
 using System.IO;
-using System.Threading;
 using PipView.Exceptions;
 
 namespace PipView.Pip
@@ -28,7 +27,7 @@ namespace PipView.Pip
 			wr.Method = "GET";
 			wr.KeepAlive = false;
 			wr.AllowAutoRedirect = false;
-			wr.UserAgent = String.Format("PipView/{0}", Program.VersionInfo);
+            wr.UserAgent = String.Format("PipView/{0}", PipView.VersionInfo);
 			wr.CookieContainer = cookies;
 
 			using (HttpWebResponse res = (HttpWebResponse)wr.GetResponse())
@@ -61,7 +60,7 @@ namespace PipView.Pip
 			wr.ContentLength = request.Length;
 			wr.ContentType = "application/x-www-form-urlencoded";
 			wr.Referer = "https://secure.zeelandnet.nl/login/index.php";
-			wr.UserAgent = String.Format("PipView/{0}", Program.VersionInfo);
+            wr.UserAgent = String.Format("PipView/{0}", PipView.VersionInfo);
 			wr.CookieContainer = cookies;
 			wr.ServicePoint.Expect100Continue = false;
 
