@@ -1,0 +1,102 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.50727</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{9B80ED29-852E-41B8-BF39-0A9C85F0AF3C}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>PipView</RootNamespace>
+    <AssemblyName>pipview</AssemblyName>
+    <StartupObject>PipView.Program</StartupObject>
+    <SignAssembly>true</SignAssembly>
+    <ApplicationIcon>mainicon.ico</ApplicationIcon>
+    <AssemblyOriginatorKeyFile>pipview.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>false</DelaySign>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>none</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="src\Configuration\Crypto.cs" />
+    <Compile Include="src\Configuration\Manager.cs" />
+    <Compile Include="src\Configuration\Settings.cs" />
+    <Compile Include="src\Configuration\Window.cs" />
+    <Compile Include="src\Exceptions\ParserException.cs" />
+    <Compile Include="src\Exceptions\PipException.cs" />
+    <Compile Include="src\Licensing\License.cs" />
+    <Compile Include="src\Licensing\LicenseValidator.cs" />
+    <Compile Include="src\MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="src\OptionsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\OptionsForm.Designer.cs">
+      <DependentUpon>OptionsForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="src\PipViewContext.cs" />
+    <Compile Include="src\Pip\Data.cs" />
+    <Compile Include="src\Pip\NativeMethods.cs" />
+    <Compile Include="src\Pip\Parser.cs" />
+    <Compile Include="src\Pip\Session.cs" />
+    <Compile Include="src\Program.cs" />
+    <Compile Include="src\Resources.cs" />
+    <Compile Include="src\Talkback\Reporter.cs" />
+    <Compile Include="src\Talkback\SimpleMimePart.cs" />
+    <Compile Include="src\Updater\Update.cs" />
+    <Compile Include="src\Updater\UpdateInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="pipview.snk" />
+  </ItemGroup>
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Icons.resx">
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="mainicon.ico" />
+  </ItemGroup>
+</Project>
